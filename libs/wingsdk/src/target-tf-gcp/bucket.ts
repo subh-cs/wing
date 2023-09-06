@@ -39,9 +39,11 @@ const BUCKET_NAME_OPTS: NameOptions = {
  */
 export class Bucket extends cloud.Bucket {
   private readonly bucket: StorageBucket;
+  private readonly public: boolean;
 
   constructor(scope: Construct, id: string, props: cloud.BucketProps = {}) {
     super(scope, id, props);
+    this.public = props.public ?? false;
 
     const bucketName = ResourceNames.generateName(this, BUCKET_NAME_OPTS);
 
@@ -60,10 +62,10 @@ export class Bucket extends cloud.Bucket {
       location: (App.of(this) as App).storageLocation,
       // recommended by GCP: https://cloud.google.com/storage/docs/uniform-bucket-level-access#should-you-use
       uniformBucketLevelAccess: true,
-      publicAccessPrevention: props.public ? "inherited" : "enforced",
+      publicAccessPrevention: this.public ? "inherited" : "enforced",
     });
 
-    if (props.public) {
+    if (this.public) {
       // https://cloud.google.com/storage/docs/access-control/making-data-public#terraform
       new StorageBucketIamMember(this, "PublicAccessIamMember", {
         bucket: this.bucket.name,
@@ -81,9 +83,54 @@ export class Bucket extends cloud.Bucket {
     });
   }
 
+  public addFile(key: string, path: string, encoding?: BufferEncoding): void {
+    new StorageBucketObject(this, `Object-${key}`, {
+      bucket: this.bucket.id,
+      name: key,
+      source: path,
+      contentEncoding: encoding,
+    });
+  }
+
   public bind(_inflightHost: IInflightHost, _ops: string[]): void {
-    // TODO: support functions once tfgcp functions are implemented
+    // TODO: Support functions once tfgcp functions are implemented
     throw new Error("Method not implemented.");
+  }
+
+  /**
+   * Run an inflight whenever a file is uploaded to the bucket.
+   */
+  public onCreate(fn: cloud.IBucketEventHandler, opts?: cloud.BucketOnCreateProps): void {
+    fn;
+    opts;
+    throw new Error("on_create method isn't implemented yet on the current target.");
+  }
+
+  /**
+   * Run an inflight whenever a file is deleted from the bucket.
+   */
+  public onDelete(fn: cloud.IBucketEventHandler, opts?: cloud.BucketOnDeleteProps): void {
+    fn;
+    opts;
+    throw new Error("on_delete method isn't implemented yet on the current target.");
+  }
+
+  /**
+   * Run an inflight whenever a file is updated in the bucket.
+   */
+  public onUpdate(fn: cloud.IBucketEventHandler, opts?: cloud.BucketOnUpdateProps): void {
+    fn;
+    opts;
+    throw new Error("on_update method isn't implemented yet on the current target.");
+  }
+
+  /**
+   * Run an inflight whenever a file is uploaded, modified, or deleted from the bucket.
+   */
+  public onEvent(fn: cloud.IBucketEventHandler, opts?: cloud.BucketOnEventProps): void {
+    fn;
+    opts;
+    throw new Error("on_event method isn't implemented yet on the current target.");
   }
 
   /** @internal */
