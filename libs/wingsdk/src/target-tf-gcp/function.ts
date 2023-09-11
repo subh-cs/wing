@@ -126,71 +126,71 @@ export class Function extends cloud.Function {
     
 
     // // Create the Google Cloud IAM binding for the function
-    // new CloudfunctionsFunctionIamPolicy(this, "FunctionIamPolicy", {
-    //   project: app.projectId,
-    //   region: app.storageLocation,
-    //   cloudFunction: this.function.name,
-    //   policyData: JSON.stringify({
-    //     bindings: [
-    //       {
-    //         role: "roles/cloudfunctions.viewer",
-    //         members: ["allUsers"],
-    //       },
-    //     ],
-    //   }),
-    // });
+    new CloudfunctionsFunctionIamPolicy(this, "FunctionIamPolicy", {
+      project: app.projectId,
+      region: app.storageLocation,
+      cloudFunction: this.function.name,
+      policyData: JSON.stringify({
+        bindings: [
+          {
+            role: "roles/cloudfunctions.viewer",
+            members: ["allUsers"],
+          },
+        ],
+      }),
+    });
 
     // Apply permissions from bound resources
-    // for (const key of this.permissions?.keys() || []) {
-    //   for (const scopedRoleAssignment of this.permissions?.get(key) ?? []) {
-    //     new CloudfunctionsFunctionIamPolicy(this, `FunctionIamPolicy-${key}`, {
-    //       project: app.projectId,
-    //       region: app.storageLocation,
-    //       cloudFunction: this.function.name,
-    //       policyData: JSON.stringify({
-    //         bindings: [
-    //           {
-    //             role: scopedRoleAssignment.roleDefinitionName,
-    //             members: [scopedRoleAssignment.scope],
-    //           },
-    //         ],
-    //       }),
-    //     });
-    //   }
-    // }
+    for (const key of this.permissions?.keys() || []) {
+      for (const scopedRoleAssignment of this.permissions?.get(key) ?? []) {
+        new CloudfunctionsFunctionIamPolicy(this, `FunctionIamPolicy-${key}`, {
+          project: app.projectId,
+          region: app.storageLocation,
+          cloudFunction: this.function.name,
+          policyData: JSON.stringify({
+            bindings: [
+              {
+                role: scopedRoleAssignment.roleDefinitionName,
+                members: [scopedRoleAssignment.scope],
+              },
+            ],
+          }),
+        });
+      }
+    }
   }
 
-  // public addPermission(resource: IResource, scopedRoleAssignment: ScopedRoleAssignment): void {
-  //   const app = App.of(this) as App;
-  //   if (!this.permissions) {
-  //     this.permissions = new Map();
-  //   }
-  //   const uniqueId = resource.node.addr.substring(-8);
+  public addPermission(resource: IResource, scopedRoleAssignment: ScopedRoleAssignment): void {
+    const app = App.of(this) as App;
+    if (!this.permissions) {
+      this.permissions = new Map();
+    }
+    const uniqueId = resource.node.addr.substring(-8);
 
-  //   if (this.permissions.has(uniqueId) && this.permissions.get(uniqueId)?.has(scopedRoleAssignment)) {
-  //     return; // already exists
-  //   }
+    if (this.permissions.has(uniqueId) && this.permissions.get(uniqueId)?.has(scopedRoleAssignment)) {
+      return; // already exists
+    }
 
-  //   if (this.function) {
-  //     new CloudfunctionsFunctionIamPolicy(this, `FunctionIamPolicy-${uniqueId}`, {
-  //       project: app.projectId,
-  //       region: app.storageLocation,
-  //       cloudFunction: this.function.name,
-  //       policyData: JSON.stringify({
-  //         bindings: [
-  //           {
-  //             role: scopedRoleAssignment.roleDefinitionName,
-  //             members: [scopedRoleAssignment.scope],
-  //           },
-  //         ],
-  //       }),
-  //     });
-  //   }
+    if (this.function) {
+      new CloudfunctionsFunctionIamPolicy(this, `FunctionIamPolicy-${uniqueId}`, {
+        project: app.projectId,
+        region: app.storageLocation,
+        cloudFunction: this.function.name,
+        policyData: JSON.stringify({
+          bindings: [
+            {
+              role: scopedRoleAssignment.roleDefinitionName,
+              members: [scopedRoleAssignment.scope],
+            },
+          ],
+        }),
+      });
+    }
 
-  //   const scopedRoleAssignments = this.permissions.get(uniqueId) ?? new Set();
-  //   scopedRoleAssignments.add(scopedRoleAssignment);
-  //   this.permissions.set(uniqueId, scopedRoleAssignments);
-  // }
+    const scopedRoleAssignments = this.permissions.get(uniqueId) ?? new Set();
+    scopedRoleAssignments.add(scopedRoleAssignment);
+    this.permissions.set(uniqueId, scopedRoleAssignments);
+  }
 
   /** @internal */
   public _toInflight(): string {
