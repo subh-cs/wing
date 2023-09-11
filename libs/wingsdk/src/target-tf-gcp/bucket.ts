@@ -5,6 +5,7 @@ import { StorageBucketIamMember } from "../.gen/providers/google/storage-bucket-
 import { StorageBucketObject } from "../.gen/providers/google/storage-bucket-object";
 import { Id } from "../.gen/providers/random/id";
 import * as cloud from "../cloud";
+import { Function } from "./function";
 import {
   CaseConventions,
   NameOptions,
@@ -31,6 +32,8 @@ const BUCKET_NAME_OPTS: NameOptions = {
   disallowedRegex: /([^a-z0-9_\-]+)/g,
   includeHash: false,
 };
+
+
 
 /**
  * GCP implementation of `cloud.Bucket`.
@@ -83,18 +86,34 @@ export class Bucket extends cloud.Bucket {
     });
   }
 
-  public addFile(key: string, path: string, encoding?: BufferEncoding): void {
-    new StorageBucketObject(this, `Object-${key}`, {
-      bucket: this.bucket.id,
-      name: key,
-      source: path,
-      contentEncoding: encoding,
-    });
-  }
+  public bind(host: IInflightHost, ops: string[]): void {
+    if (!(host instanceof Function)) {
+      throw new Error("Buckets can only be bound by GCP functions for now.");
+    }
 
-  public bind(_inflightHost: IInflightHost, _ops: string[]): void {
-    // TODO: Support functions once tfgcp functions are implemented
-    throw new Error("Method not implemented.");
+    // Define the appropriate permissions and roles for GCP
+    if (
+      ops.includes(cloud.BucketInflightMethods.DELETE) ||
+      ops.includes(cloud.BucketInflightMethods.PUT) ||
+      ops.includes(cloud.BucketInflightMethods.PUT_JSON)
+    ) {
+      // Add permissions for write operations
+
+      
+    } else if (
+      ops.includes(cloud.BucketInflightMethods.GET) ||
+      ops.includes(cloud.BucketInflightMethods.LIST) ||
+      ops.includes(cloud.BucketInflightMethods.GET_JSON)
+    ) {
+      // Add permissions for read operations
+      
+    }
+
+    // host.addEnvironment(this.envName(), this.bucket.name);
+    // Add other necessary environment variables for GCP as needed
+    // ...
+
+    super.bind(host, ops);
   }
 
   /**
