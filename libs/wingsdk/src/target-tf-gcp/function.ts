@@ -1,0 +1,115 @@
+import { Construct } from "constructs";
+import * as cloud from "../cloud";
+import { CloudfunctionsFunction } from "../.gen/providers/google/cloudfunctions-function"
+import { StorageBucket } from "../.gen/providers/google/storage-bucket";
+import { StorageBucketObject } from "../.gen/providers/google/storage-bucket-object";
+import { CloudfunctionsFunctionIamMember } from "../.gen/providers/google/cloudfunctions-function-iam-member";
+import { App } from "./app";
+import { CaseConventions, NameOptions, ResourceNames } from "../shared/resource-names";
+import { Id } from "../.gen/providers/random/id";
+import { createBundle } from "../shared/bundling";
+import { AssetType, TerraformAsset } from "cdktf";
+import { resolve } from "path";
+import { IInflightHost } from "../std";
+
+const FUNCTION_NAME_OPTS: NameOptions = {
+    maxLen: 32,
+    disallowedRegex: /[^a-z0-9]+/g,
+    case: CaseConventions.LOWERCASE,
+};
+
+const BUCKET_NAME_OPTS: NameOptions = {
+    maxLen: 54,
+    case: CaseConventions.LOWERCASE,
+    disallowedRegex: /([^a-z0-9_\-]+)/g,
+    includeHash: false,
+};
+/**
+ * GCP implementation of `cloud.Function`.
+ *
+ * @inflight `@winglang/wingsdk.cloud.IFunctionClient`
+ */
+
+export class Function extends cloud.Function {
+    private readonly function: CloudfunctionsFunction;
+    private readonly bucket: StorageBucket;
+    private readonly bucketObject: StorageBucketObject;
+
+
+    constructor(scope: Construct, id: string, inflight: cloud.IFunctionHandler, props: cloud.FunctionProps = {}) {
+        super(scope, id, inflight, props);
+
+        // app is a property of the `cloud.Function` class
+        const app = App.of(this) as App;
+
+        // bundled code is guaranteed to be in a fresh directory
+        const bundle = createBundle(this.entrypoint);
+
+        // Create Cloud Function executable
+        const asset = new TerraformAsset(this, "Asset", {
+            path: resolve(bundle.directory),
+            type: AssetType.ARCHIVE,
+        });
+
+        // create a bucket with unique name
+        const bucketName = ResourceNames.generateName(this, BUCKET_NAME_OPTS);
+        // GCP bucket names must be globally unique, but the Terraform resource
+        // provider doesn't provide a mechanism like `bucketPrefix` as AWS does,
+        // so we must generate a random string to append to the bucket name.
+
+        // The random string must be managed in Terraform state so that it doesn't
+        // change on every subsequent compile or deployment.
+        const randomId = new Id(this, "Id", {
+            byteLength: 4, // 4 bytes = 8 hex characters
+        });
+
+        // create the bucket
+        this.bucket = new StorageBucket(this, "Default", {
+            name: bucketName + "-" + randomId.hex,
+            location: app.storageLocation,
+            uniformBucketLevelAccess: true,
+            publicAccessPrevention: "enforced",
+        });
+
+        // put the executable in the bucket as an object
+        this.bucketObject = new StorageBucketObject(this, "Object", {
+            name: "objects",
+            bucket: this.bucket.name,
+            source: asset.path,
+        });
+
+        // create the cloud function
+        this.function = new CloudfunctionsFunction(this, "Default", {
+            name: ResourceNames.generateName(this, FUNCTION_NAME_OPTS),
+            runtime: "nodejs16",
+            sourceArchiveBucket: this.bucket.name,
+            sourceArchiveObject: this.bucketObject.name,
+            entryPoint: "handler",
+            availableMemoryMb: 128,
+            timeout: 60,
+            triggerHttp: true,
+        });
+
+        // create the permissions
+        new CloudfunctionsFunctionIamMember(this, "Default", {
+            project: app.projectId,
+            region: app.storageLocation,
+            cloudFunction: this.function.name,
+            role: "roles/cloudfunctions.invoker",
+            member: "allUsers",
+        })
+    }
+
+    // TODO: implement
+    public _toInflight(): string {
+        throw new Error("Method not implemented.");
+    }
+
+    public addPermission(_principal: string, _action: string): void {
+        throw new Error("Method not implemented.");
+    }
+
+    public bind(_host: IInflightHost, _ops: string[]): void {
+        throw new Error("Method not implemented.");
+    }
+}
