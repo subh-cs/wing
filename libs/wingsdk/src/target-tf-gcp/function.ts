@@ -67,8 +67,6 @@ export class Function extends cloud.Function {
         this.bucket = new StorageBucket(this, "Default", {
             name: bucketName + "-" + randomId.hex,
             location: app.storageLocation,
-            uniformBucketLevelAccess: true,
-            publicAccessPrevention: "enforced",
         });
 
         // put the executable in the bucket as an object
@@ -81,12 +79,12 @@ export class Function extends cloud.Function {
         // create the cloud function
         this.function = new CloudfunctionsFunction(this, "Default", {
             name: ResourceNames.generateName(this, FUNCTION_NAME_OPTS),
+            description: "This function was created by Wing",
             runtime: "nodejs16",
+            availableMemoryMb: 128,
             sourceArchiveBucket: this.bucket.name,
             sourceArchiveObject: this.bucketObject.name,
             entryPoint: "handler",
-            availableMemoryMb: 128,
-            timeout: 60,
             triggerHttp: true,
         });
 
