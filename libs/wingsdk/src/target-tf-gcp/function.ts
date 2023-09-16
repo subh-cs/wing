@@ -64,20 +64,20 @@ export class Function extends cloud.Function {
         });
 
         // create the bucket
-        this.bucket = new StorageBucket(this, "Default", {
+        this.bucket = new StorageBucket(this, "Function_Bucket", {
             name: bucketName + "-" + randomId.hex,
             location: app.storageLocation,
         });
 
         // put the executable in the bucket as an object
-        this.bucketObject = new StorageBucketObject(this, "Object", {
+        this.bucketObject = new StorageBucketObject(this, "Function_Object_Bucket", {
             name: "objects",
             bucket: this.bucket.name,
             source: asset.path,
         });
 
         // create the cloud function
-        this.function = new CloudfunctionsFunction(this, "Default", {
+        this.function = new CloudfunctionsFunction(this, "Default_Function", {
             name: ResourceNames.generateName(this, FUNCTION_NAME_OPTS),
             description: "This function was created by Wing",
             runtime: "nodejs16",
@@ -89,7 +89,7 @@ export class Function extends cloud.Function {
         });
 
         // create the permissions
-        new CloudfunctionsFunctionIamMember(this, "Default", {
+        new CloudfunctionsFunctionIamMember(this, "Function_IAM", {
             project: app.projectId,
             region: app.storageLocation,
             cloudFunction: this.function.name,
