@@ -3,7 +3,7 @@ import { test, expect } from "vitest";
 import { Function } from "../../src/cloud";
 import { Duration } from "../../src/std";
 import * as tfgcp from "../../src/target-tf-gcp";
-import { Testing } from "../../src/testing";
+import { Testing } from "../../src/testing/index";
 import { mkdtemp, tfResourcesOf, tfSanitize, treeJsonOf } from "../util";
 
 const GCP_APP_OPTS = {
